@@ -1,0 +1,5 @@
+make --dry-run --keep-going --print-directory
+make: Entering directory '/home/user/Project/cross-word'
+g++ -std=c++17 -Wall -g -o cross-word main.cc
+make: Leaving directory '/home/user/Project/cross-word'
+ 
