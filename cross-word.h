@@ -1,10 +1,11 @@
-// Copyright 2021 Sai Durga Rithvik Oruganti
+// Copyright 2022 Sai Durga Rithvik Oruganti
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <string>
+#include <string.h>
+#include <stdio.h>
 #include <vector>
-
+#include <algorithm>
 
 using std::cout;
 using std::string;
@@ -29,25 +30,26 @@ bool left(const vector<vector<char>> &puzzle, string word,
               vector<int> &start, vector<int> &end);
 bool findWord(const vector<vector<char>> &puzzle, string word,
               vector<int> &start, vector<int> &end);
-void add_point(int x, int y, int x1, int y1);
+void add_point(int x, int y, int x1, int y1, string word);
 
-void readPuzzle(vector<vector<char>> &puzzle, string filename) {
-    std::ifstream fs(filename);
-    string line, word;
-    if (fs.is_open()) {
-        while (std::getline(fs, word)) {
-            std::stringstream ss(word);
-            vector<char> vec;
-            vector<int> tmp;
-            while (getline(ss, line, ' ')) {
-                vec.push_back(line[0]);
-                tmp.push_back(0);
-            }
-            puzzle.push_back(vec);
-            POINTS.push_back(tmp);
-        }
-        fs.close();
+string reverse(string word) {
+  if (word.length() == 1) return word;
+  return word[word.length()-1] + reverse(word.substr(0, word.length()-1));
+}
+
+void printWords(const vector<string> &words) {
+    for (auto i : words) {
+      cout << i << std::endl;
     }
+}
+
+bool findWord(const vector<vector<char>> &puzzle, string word,
+              vector<int> &start, vector<int> &end) {
+  if (vertical(puzzle, word, start, end) ||
+      horizontal(puzzle, word, start, end) ||
+      left(puzzle, word, start, end) ||
+      right(puzzle, word, start, end)) return true;
+  return false;
 }
 
 void readWords(vector<string> &words, string filename) {
@@ -73,56 +75,35 @@ void printPuzzle(const vector<vector<char>> &puzzle) {
   }
 }
 
-void printWords(const vector<string> &words) {
-    for (auto i : words) {
-      cout << i << std::endl;
-    }
-}
-
 void printLocation(string word, const vector<int> &start,
                    const vector<int> &end, bool found) {
     if (found == true) {
-      cout << "Word " << word << " found at (" << start[0] << "," <<
-       start[1] << ") -> (" << end[0] << "," << end[1] << ")" << "\n";
-      add_point(start[0], start[1], end[0], end[1]);
+      //cout << "Word " << word << " found at (" << start[0] << "," <<
+       // start[1] << ") -> (" << end[0] << "," << end[1] << ")" << std::endl;
+      add_point(start[0], start[1], end[0], end[1], word);
 
     }
-    if (found == false) cout << "Word " << word << " not found" << "\n";
+    if (found == false) cout << "Word " << word << " not found" << std::endl;
 
 }
 
-void add_point(int x, int y, int x1, int y1){
-    int rand_color = (rand()%7)+41;
-
-    if (y == y1){
-        int tmp = x*(x1>x) + x1*(x>x1);
-        int range = x*(x1<x) + x1*(x<x1);
-        for (int i = tmp; i <= range; i++){
-            POINTS[i][y]= rand_color;
+void readPuzzle(vector<vector<char>> &puzzle, string filename) {
+    std::ifstream fs(filename);
+    string line, word;
+    if (fs.is_open()) {
+        while (std::getline(fs, word)) {
+            std::stringstream ss(word);
+            vector<char> vec;
+            vector<int> tmp;
+            while (getline(ss, line, ' ')) {
+                vec.push_back(line[0]);
+                tmp.push_back(0);
+            }
+            puzzle.push_back(vec);
+            POINTS.push_back(tmp);
         }
+        fs.close();
     }
-    else if (x == x1){
-        int tmp = y*(y1>y) + y1*(y>y1);
-        int range = y*(y1<y) + y1*(y<y1);
-        for (int i = tmp; i <= range; i++){
-            POINTS[x][i]= rand_color;
-        }
-    }
-    else {
-        int tmp = x*(x1>x) + x1*(x>x1);
-        int range = x*(x1<x) + x1*(x<x1);
-        int slope = (x1-x)/(y1-y) > 0 ? 1 : -1;
-        //diagonal
-    }
-}
-
-bool findWord(const vector<vector<char>> &puzzle, string word,
-              vector<int> &start, vector<int> &end) {
-  if (vertical(puzzle, word, start, end) ||
-      horizontal(puzzle, word, start, end) ||
-      left(puzzle, word, start, end) ||
-      right(puzzle, word, start, end)) return true;
-  return false;
 }
 
 bool vertical(const vector<vector<char>> & puzzle, string word,
@@ -217,8 +198,33 @@ bool left(const vector<vector<char>> & puzzle, string word,
                 }
                 return false;
               }
-string reverse(string word) {
-  if (word.length() == 1) return word;
-  return word[word.length()-1] + reverse(word.substr(0, word.length()-1));
-  }
 
+void add_point(int x, int y, int x1, int y1, string word){
+    int rand_color = (rand()%6) + 41;
+    int length = word.size();
+    
+    if (y == y1){
+        int tmp = x*(x1>x) + x1*(x>x1);
+        for (int i = tmp; i < length + tmp; i++){
+            POINTS[i][y]= rand_color;
+        }
+    }
+    else if (x == x1){
+        int tmp = y*(y1>y) + y1*(y>y1);
+        for (int i = 0; i < length; i++){
+            POINTS[x][i + tmp]= rand_color;
+        }
+    }
+    else {
+        int tmp = x*(x1>x) + x1*(x>x1);
+        int tmp2 = y*(y1>y) + y1*(y>y1);
+        int slope = -(y1-y)/(x1-x) > 0 ? 1 : -1; // negative because the y axis increments after each row going down.
+
+        for (int i = tmp2; i < length + tmp2; i++){
+            for (int j = tmp; j < length + tmp; j++){
+                if (i-tmp2 == j-tmp && slope == -1) POINTS[j][i] = rand_color;
+                else if (i+j-tmp-tmp2+1 == length && slope == 1) POINTS[j][i] = rand_color;
+            }
+        }
+    }
+}
